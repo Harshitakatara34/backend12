@@ -14,8 +14,7 @@ export const UsersPrivateImages = async (req: Request, res: Response) => {
   const { userId } = req.params;
 
   try {
-    const images = await imageModel
-      .find({ userId, isPublic: false })
+    const images = await imageModel.find({ userId, isPublic: false });
 
     res.status(200).json({ data: images });
   } catch (error) {
@@ -27,13 +26,12 @@ export const UsersPrivateImages = async (req: Request, res: Response) => {
 export const GalleryImagesPublic = async (req: Request, res: Response) => {
   try {
     const search = req.query.search ? req.query.search.toString() : "";
-    const sortField = req.query.sortField ? req.query.sortField.toString() : "likesLength"; // Default sort by likes
+    const sortField = req.query.sortField
+      ? req.query.sortField.toString()
+      : "likesLength"; // Default sort by likes
     const sortOrder = req.query.sortOrder === "asc" ? 1 : -1; // Default sort order descending
-    // Parse limit and page from query parameters, providing default values if not specified
-    const limit = parseInt(req.query.limit as string) || 10; // Default to 10 items per page
-    const page = parseInt(req.query.page as string) || 1; // Default to first page
 
-    let aggregationPipeline:any[] = [
+    let aggregationPipeline: any[] = [
       {
         $match: {
           isPublic: true,
@@ -46,19 +44,22 @@ export const GalleryImagesPublic = async (req: Request, res: Response) => {
         },
       },
       // Add likesLength field conditionally, if sorting by likes
-      ...(sortField === "likesLength" ? [{
-        $addFields: {
-          likesLength: { $size: "$likes" },
-        },
-      }] : []),
+      ...(sortField === "likesLength"
+        ? [
+            {
+              $addFields: {
+                likesLength: { $size: "$likes" },
+              },
+            },
+          ]
+        : []),
       {
         $sort: {
-          ...(sortField === "likesLength" ? { likesLength: sortOrder } : { [sortField]: sortOrder }),
+          ...(sortField === "likesLength"
+            ? { likesLength: sortOrder }
+            : { [sortField]: sortOrder }),
         },
       },
-      // Pagination: skip and limit stages
-      { $skip: (page - 1) * limit },
-      { $limit: limit },
       {
         $lookup: {
           from: "users",
@@ -89,11 +90,9 @@ export const UserPublicImages = async (req: Request, res: Response) => {
 
   try {
     // Query for the images with pagination
-    const images = await imageModel
-      .find({ userId, isPublic: true })
+    const images = await imageModel.find({ userId, isPublic: true });
 
-
-    res.status(200).json({ data: images});
+    res.status(200).json({ data: images });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -110,24 +109,35 @@ export const SingleImage = async (req: Request, res: Response) => {
 
     const link = await linkModal.findOne({ userId: (Image.userId as any)._id });
 
-    const tags =  await openai.chat.completions.create({
+    const tags = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
-        {role: "assistant", content: "act as a tag generator , u will recive a image generation prompt and you have to responce with an array of suggested tags here is a prompt just responce with array of tags only. don't add any other sentence in your responce"},
-        {role: "user", content: (Image.description as string)},
+        {
+          role: "assistant",
+          content:
+            "act as a tag generator , u will recive a image generation prompt and you have to responce with an array of suggested tags here is a prompt just responce with array of tags only. don't add any other sentence in your responce",
+        },
+        { role: "user", content: Image.description as string },
       ],
     });
 
     let suggestedTagsString = tags.choices[0].message.content;
     // Remove the leading and trailing double quotes and brackets
-    suggestedTagsString = suggestedTagsString.trim().replace(/^\["|"\]$/g, '');
+    suggestedTagsString = suggestedTagsString.trim().replace(/^\["|"\]$/g, "");
     // Split the string into an array and trim each tag to remove extra spaces and quotes
-    let suggestedTags = suggestedTagsString.split(/",\s*"/).map(tag => tag.replace(/^"|"$/g, '')).slice(0, 5);
-    
+    let suggestedTags = suggestedTagsString
+      .split(/",\s*"/)
+      .map((tag) => tag.replace(/^"|"$/g, ""))
+      .slice(0, 5);
 
     res
       .status(201)
-      .json({ message: "Views updated successfully", Image, link, suggestedTags });
+      .json({
+        message: "Views updated successfully",
+        Image,
+        link,
+        suggestedTags,
+      });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -135,12 +145,12 @@ export const SingleImage = async (req: Request, res: Response) => {
 
 // like image Function
 export const LikeImage = async (req: Request, res: Response) => {
-  const { userId, imageId } = req.body; 
+  const { userId, imageId } = req.body;
 
   try {
     // Find the image by ID
     const image = await imageModel.findById(imageId).exec();
-    
+
     if (image) {
       const index = image.likes.indexOf(userId);
       if (index === -1) {
@@ -156,15 +166,15 @@ export const LikeImage = async (req: Request, res: Response) => {
 
       // Send a response back to the client
       res.status(200).json({
-        message: 'Successfully toggled like on image',
-        image
+        message: "Successfully toggled like on image",
+        image,
       });
     } else {
-      res.status(404).send('Image not found');
+      res.status(404).send("Image not found");
     }
   } catch (error) {
-    res.status(500).send('Server error');
-    console.error('LikeImage error:', error);
+    res.status(500).send("Server error");
+    console.error("LikeImage error:", error);
   }
 };
 
@@ -200,22 +210,21 @@ export const AddTagAndPostImage = async (req: Request, res: Response) => {
 
 // This route is for Geting All the images which is like by the Specific user
 export const UserLikedImage = async (req: Request, res: Response) => {
-  const { userId } = req.params; 
+  const { userId } = req.params;
 
   try {
     // Find all images where the likes array contains the userId and apply pagination
     const images = await imageModel.find({
-      likes: userId
-    })
-    
+      likes: userId,
+    });
+
     // Send the found images and pagination information as a response
     res.status(200).json({
       data: images,
     });
-
   } catch (error) {
-    console.error('Error fetching liked images:', error);
-    res.status(500).send('Server error occurred while fetching liked images.');
+    console.error("Error fetching liked images:", error);
+    res.status(500).send("Server error occurred while fetching liked images.");
   }
 };
 
@@ -245,6 +254,5 @@ export const ImageUnpublish = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Failed to unpublish image" });
   }
 };
-
 
 // act as a tag generator , u will recive a image generation prompt and you have to responce with an array of suggested tags here is a prompt just responce with array of tags only. don't add any other sentence in your responce
