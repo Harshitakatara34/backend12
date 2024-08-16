@@ -12,7 +12,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://inspire-ai-frontend.vercel.app/",
+      "https://inspire-ai-frontend.vercel.app",
       "https://inspire-ai-frontend-phi.vercel.app",
       "https://app.theinspire.ai",
     ],
