@@ -8,12 +8,19 @@ import cookieParser from "cookie-parser";
 const app: Application = express();
 
 app.use(bodyParser.json());
-app.use(cors({
-  origin:["http://localhost:5173","https://inspire-ai-frontend-phi.vercel.app","https://app.theinspire.ai"],
-  credentials:true
-}));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://inspire-ai-frontend.vercel.app/",
+      "https://inspire-ai-frontend-phi.vercel.app",
+      "https://app.theinspire.ai",
+    ],
+    credentials: true,
+  })
+);
 
-app.use(cookieParser())
+app.use(cookieParser());
 connectDatabase();
 
 app.get("/", (req: Request, res: Response) => {
